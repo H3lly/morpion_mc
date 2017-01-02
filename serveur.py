@@ -2,8 +2,8 @@
 
 import socket, sys, random
 from grid import *
-
-def play(current_player): # 1->J1, 2->J2
+address
+def play(current_player, adress): # 1->J1, 2->J2
     grid = grid(), grid(), grid()]
     grids[current_player].display()
     while grids[0].gameOver() == -1:
@@ -47,7 +47,15 @@ def serveur():
         
         # 4) Etablissement de la connexion :
         connexion, adresse = connexion_principale.accept()
-    
+        #des qu'il y a deux client
+        #lancer le jeu
+        if len(adresse)>1:
+            J1=adresse[0]
+            J2=adresse[1]
+            while 1:
+                play(0, J1)
+                play(1, J2)
+
         # 5) Dialogue avec les clients
         #jouer
 
@@ -80,6 +88,8 @@ def client():
     # 4) Fermer la connexion :
     print("Fin de la connexion")
     connexion_au_serveur.close()
+
+
 
 
 PORT = 7777
