@@ -2,24 +2,23 @@
 
 import socket, sys, random
 from grid import *
-address
-def play(current_player, adress): # 1->J1, 2->J2
-    grid = grid(), grid(), grid()]
+
+def play(current_player, connexion): # 1->J1, 2->J2
+    grids = [grid(), grid(), grid()]
     grids[current_player].display()
     while grids[0].gameOver() == -1:
         shot = -1
         while shot <0 or shot >=NB_CELLS: #coup
             shot = int(input ("Quelle case allez-vous jouer ?"))
 
-        if (grids[0].cells[shot] != EMPTY): #si la case est libre
+        if (grids[0].cells[shot] != EMPTY): #si la case est non libre
             grids[current_player].cells[shot] = grids[0].cells[shot]
 
-        else: #si elle n'est pas libre
+        else: #si elle est libre
             grids[current_player].cells[shot] = current_player
             grids[0].play(current_player, shot)
             current_player = current_player%2+1
-        if current_player == J1:
-            grids[J1].display()
+        grids[current_player].display()
     print("game over")
     grids[0].display()
     if grids[0].gameOver() == J1:
@@ -50,11 +49,11 @@ def serveur():
         #des qu'il y a deux client
         #lancer le jeu
         if len(adresse)>1:
-            J1=adresse[0]
-            J2=adresse[1]
+            J1=connexion[0]
+            J2=connexion[1]
             while 1:
-                play(0, J1)
-                play(1, J2)
+                play(1, J1)
+                play(2, J2)
 
         # 5) Dialogue avec les clients
         #jouer
