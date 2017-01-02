@@ -31,7 +31,7 @@ def serveur():
         connexion, adresse = connexion_principale.accept()
     
         # 5) Dialogue avec les clients
-        
+        #jouer
 
         # 6) Fermeture de la connexion
         connexiont.send("Au revoir !")
@@ -55,3 +55,10 @@ def client():
     message_serveur = connexion_au_serveur.recv(1024)
     
     while 1:
+        if message_serveur.upper() == "FIN" or message_serveur == "":
+            break
+        #jouer
+
+    # 4) Fermer la connexion :
+    print("Fin de la connexion")
+    connexion_au_serveur.close()
