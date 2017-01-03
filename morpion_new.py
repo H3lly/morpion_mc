@@ -6,6 +6,7 @@ from grid import *
 
 connexions_clients = {} # dictionaire des connexions clients
 nombre_clients = 0
+grids = [grid(), grid(), grid()]
 
 def message_pour_tous(message):
     # Message du serveur vers tous les clients
@@ -14,10 +15,9 @@ def message_pour_tous(message):
         connexions_clients[client].send(message_bytes)
 
 def main():
-    grids = [grid(), grid(), grid()]
-    current_player = J1
-    other_player = J2
-    connexions_clients[str(current_player)].send(bytes("grids["+str(current_player)+"].display()", "utf8"))
+    current_player = 1
+    other_player = 2
+    connexions_clients[str(current_player)].send(bytes(str(current_player), "utf8"))
     connexions_clients[str(other_player)].send(bytes("L'autre joueur est en train de jouer. Veuillez attendre...", "utf8"))
         
 def serveur():
@@ -75,9 +75,9 @@ def client():
     while 1:
         message_serveur_bytes = connexion_au_serveur.recv(1024)
         message_serveur = message_serveur_bytes.decode()
-        if message_serveur == "grids[J1].display()":
+        if message_serveur == "1":
             grids[1].display()
-        elif message_serveur == "grids[J2].display()":
+        elif message_serveur == "2":
             grids[2].display()
         else:
             print(message_serveur)
@@ -87,10 +87,15 @@ def client():
     print("Fin de la connexion")
     connexion_au_serveur.close()
 
-PORT = 2362
+PORT = 7000
 if len(sys.argv) < 2:
     HOTE = ''
     serveur()
 else:
     HOTE = sys.argv[1]
     client()
+
+
+#si le serveur ferme, les clients doivent fermer aussi
+#si un client quitte et qu'il revient, le gérer
+#si un client quitte trop longtemps, fermer le jeu
