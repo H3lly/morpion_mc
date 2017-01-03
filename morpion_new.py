@@ -6,6 +6,12 @@ import socket, sys
 connexions_clients = {} # dictionaire des connexions clients
 nombre_clients = 0
 
+def message_pour_tous(message):
+    # Message du serveur vers tous les clients
+    message_bytes = message.encode()
+    for client in connexions_clients:
+        connexions_clients[client].send(message_bytes)
+
 def serveur():
 
     global nombre_clients
@@ -40,8 +46,10 @@ def serveur():
         message_client_bytes = message_client.encode()
         connexion.send(message_client_bytes)
 
-        if(len(connexions_clients) < 2
-
+        if(nombre_clients) >= 2:
+            message_pour_tous("envoyer_message_clients ok")
+            
+            
 def client():
     # 1) création du socket :
     connexion_au_serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -65,7 +73,7 @@ def client():
     print("Fin de la connexion")
     connexion_au_serveur.close()
 
-PORT = 2345
+PORT = 2350
 if len(sys.argv) < 2:
     HOTE = ''
     serveur()
