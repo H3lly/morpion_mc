@@ -6,7 +6,7 @@ from grid import *
 def play(current_player): # 1->J1, 2->J2
     grids = [grid(), grid(), grid()]
     grids[current_player].display()
-    while grids[0].gameOver() == -1:
+    while grids[0].gameOver() == -1: #tant que le jeu n'est pas gameover
         shot = -1
         while shot <0 or shot >=NB_CELLS: #coup
             shot = int(input ("Quelle case allez-vous jouer ?"))
@@ -15,10 +15,10 @@ def play(current_player): # 1->J1, 2->J2
             grids[current_player].cells[shot] = grids[0].cells[shot]
 
         else: #si elle est libre
-            grids[current_player].cells[shot] = current_player
-            grids[0].play(current_player, shot)
-            current_player = current_player%2+1
-        grids[current_player].display()
+            grids[current_player].cells[shot] = current_player #ajoute le coup sur la grile de current_player
+            grids[0].play(current_player, shot) #ajoute le coup sur la grille générale
+            current_player = current_player%2+1 #on change de joueur 
+        grids[current_player].display() #on affiche la grille du joueur actuel
     print("game over")
     grids[0].display()
     if grids[0].gameOver() == J1:
