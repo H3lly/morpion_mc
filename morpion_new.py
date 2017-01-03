@@ -17,7 +17,12 @@ def message_pour_tous(message):
 def main():
     current_player = 1
     other_player = 2
-    connexions_clients[str(current_player)].send(bytes(str(current_player), "utf8"))
+    grids[current_player].cells[2] = current_player
+    grids[other_player].cells[1] = other_player
+    #for client in connexions_clients:
+        #connexions_clients[client].send(bytes(client+"\n", "utf8"))
+    connexions_clients[str(current_player)].send(bytes(str(current_player)+"\n", "utf8"))
+    connexions_clients[str(other_player)].send(bytes(str(other_player)+"\n", "utf8"))
     connexions_clients[str(other_player)].send(bytes("L'autre joueur est en train de jouer. Veuillez attendre...", "utf8"))
         
 def serveur():
@@ -32,11 +37,11 @@ def serveur():
     try:
         connexion_principale.bind((HOTE, PORT))
     except socket.error:
-        print("La liaison du socket à l'adresse choisie a échoué.")
+        print("La liaison du socket à l'adresse choisie a échoué.\n")
         sys.exit()
 
     # Attente de la requete de connexion d'un client :
-    print("Serveur pret, en attente de requetes ...")
+    print("Serveur pret, en attente de requetes ...\n")
     connexion_principale.listen(5)
 
     # Prise en charge des connexions demandées par les clients :
@@ -47,7 +52,7 @@ def serveur():
         # Mémoriser la connexion dans le dictionnaire :
         nombre_clients = nombre_clients + 1
         connexions_clients[str(nombre_clients)] = connexion
-        print("Client {} connecté, adresse IP {}, port {}.".format(str(nombre_clients), adresse[0], adresse[1]))
+        print("Client {} connecté, adresse IP {}, port {}.\n".format(str(nombre_clients), adresse[0], adresse[1]))
  
         # Dialogue avec les clients
         message_client = "Vous etes connecte. Envoyez vos messages."
@@ -55,7 +60,7 @@ def serveur():
         connexion.send(message_client_bytes)
 
         if(nombre_clients) >= 2:
-            message_pour_tous("Le jeu va commencer !")
+            message_pour_tous("Le jeu va commencer !\n")
             main()
             
             
@@ -67,27 +72,30 @@ def client():
     try:
         connexion_au_serveur.connect((HOTE, PORT))
     except socket.error:
-        print("La connexion a échoué.")
+        print("La connexion a échoué.\n")
         sys.exit()
-    print("Connexion établie avec le serveur.")
+    print("Connexion établie avec le serveur.\n")
 
     # 3) Dialogue avec le serveur :    
     while 1:
         message_serveur_bytes = connexion_au_serveur.recv(1024)
         message_serveur = message_serveur_bytes.decode()
-        if message_serveur == "1":
-            grids[1].display()
-        elif message_serveur == "2":
-            grids[2].display()
-        else:
-            print(message_serveur)
+        message_list = message_serveur.split("\n")
+        for i in range(len(message_list)):
+
+            if message_list[i] == "1":
+                grids[1].display()
+            elif message_list[i] == "2":
+                grids[2].display()
+            else:
+                print(message_list[i]+"\n", flush=True)
 
 
     # 4) Fermer la connexion :
     print("Fin de la connexion")
     connexion_au_serveur.close()
 
-PORT = 7000
+PORT = 7035
 if len(sys.argv) < 2:
     HOTE = ''
     serveur()
