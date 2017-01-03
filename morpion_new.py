@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import socket, sys
+from grid import *
 
 connexions_clients = {} # dictionaire des connexions clients
 nombre_clients = 0
@@ -12,6 +13,13 @@ def message_pour_tous(message):
     for client in connexions_clients:
         connexions_clients[client].send(message_bytes)
 
+def main():
+    grids = [grid(), grid(), grid()]
+    current_player = J1
+    other_player = J2
+    connexions_clients[str(current_player)].send(bytes("grids["+str(current_player)+"].display()", "utf8"))
+    connexions_clients[str(other_player)].send(bytes("L'autre joueur est en train de jouer. Veuillez attendre...", "utf8"))
+        
 def serveur():
 
     global nombre_clients
@@ -47,7 +55,8 @@ def serveur():
         connexion.send(message_client_bytes)
 
         if(nombre_clients) >= 2:
-            message_pour_tous("envoyer_message_clients ok")
+            message_pour_tous("Le jeu va commencer !")
+            main()
             
             
 def client():
@@ -66,14 +75,19 @@ def client():
     while 1:
         message_serveur_bytes = connexion_au_serveur.recv(1024)
         message_serveur = message_serveur_bytes.decode()
-        print(message_serveur)
+        if message_serveur == "grids[J1].display()":
+            grids[1].display()
+        elif message_serveur == "grids[J2].display()":
+            grids[2].display()
+        else:
+            print(message_serveur)
 
 
     # 4) Fermer la connexion :
     print("Fin de la connexion")
     connexion_au_serveur.close()
 
-PORT = 2350
+PORT = 2362
 if len(sys.argv) < 2:
     HOTE = ''
     serveur()
