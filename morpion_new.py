@@ -38,7 +38,7 @@ def main():
     global grids
     current_player = J1
     other_player = J2
-    envoi_message(connexions_clients[str(other_player)], "L'autre joueur est en train de jouer. Veuillez attendre...")
+    envoi_message(connexions_clients[str(other_player)], "L'autre joueur est en train de jouer. Veuillez attendre...\n")
     while grids[0].gameOver() == -1:
         shot = -1
         while shot < 0 or shot >= NB_CELLS:
@@ -55,10 +55,10 @@ def main():
             grids[0].play(current_player, shot)
             current_player = current_player%2+1
             other_player = current_player%2+1
-        envoi_message(connexions_clients[str(other_player)], str(other_player)+"\n")
-        envoi_message(connexions_clients[str(other_player)], "L'autre joueur est en train de jouer. Veuillez attendre...") # TODO : gérer le cas où c'est la fin du jeu et l'autre n'aura pas à jouer
+        envoi_message(connexions_clients[str(other_player)], str(other_player))
+        envoi_message(connexions_clients[str(other_player)], "L'autre joueur est en train de jouer. Veuillez attendre...\n") # TODO : gérer le cas où c'est la fin du jeu et l'autre n'aura pas à jouer
     for client in connexions_clients:
-        envoi_message(connexions_clients[client], "game over")
+        envoi_message(connexions_clients[client], "game over\n")
         envoi_message(connexions_clients[client], "0")
         
 def serveur():
@@ -91,10 +91,10 @@ def serveur():
         print("Client {} connecté, adresse IP {}, port {}.\n".format(str(nombre_clients), adresse[0], adresse[1]))
  
         # Dialogue avec les clients
-        envoi_message(connexion, "Vous etes connecte.")
+        envoi_message(connexion, "Vous etes connecte.\n")
    
         if(nombre_clients) >= 2:
-            message_pour_tous("Le jeu va commencer !")
+            message_pour_tous("Le jeu va commencer !\n")
             main()
             
             
@@ -127,7 +127,7 @@ def client():
             packed_data = packer.pack(shot)
             connexion_au_serveur.sendall(packed_data)
         else:
-            print(message + "\n")
+            print(message)
 
     # 4) Fermer la connexion :
     print("Fin de la connexion")
@@ -135,7 +135,7 @@ def client():
 
 
     
-PORT = 7119
+PORT = 7125
 if len(sys.argv) < 2:
     HOTE = ''
     serveur()
