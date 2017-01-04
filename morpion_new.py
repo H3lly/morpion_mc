@@ -7,15 +7,21 @@ from grid import *
 
 connexions_clients = {} # dictionaire des connexions clients
 nombre_clients = 0
-grids = [grid(), grid(), grid()]
 
+# AFFICHAGE
 
 def message_pour_tous(message):
     # Message du serveur vers tous les clients
     for client in connexions_clients:
         envoi_message(connexions_clients[client], message)
+
+def redirection_affichage(grids, grid, current_player):
+    sys.stdout = StringIO()
+    grids[grid].display()
+    s = str(sys.stdout.getvalue())
+    envoi_message(connexions_clients[str(current_player)], s)
         
-# -- PROTOCOL -- #
+# PROTOCOL
 
 def envoi_message(sock, data):
     length = len(data)
@@ -43,36 +49,42 @@ def envoi_int(sock, data):
 def reception_int(sock):
     return struct.unpack('!I', sock.recv(4))[0]
 
-# -- FIN PROTOCOL -- #
+
+# JEU
 
 def main():
+    grids = [grid(), grid(), grid()]
     current_player = J1
     other_player = J2
     envoi_message(connexions_clients[str(other_player)], "L'autre joueur est en train de jouer. Veuillez attendre...\n")
     while grids[0].gameOver() == -1:
         shot = -1
         while shot < 0 or shot >= NB_CELLS:
-            #envoi_message(connexions_clients[str(current_player)], str(current_player))
+            redirection_affichage(grids, current_player, current_player)
             envoi_message(connexions_clients[str(current_player)], "choix")
             shot = reception_int(connexions_clients[str(current_player)])
         if (grids[0].cells[shot]) != EMPTY:
             grids[current_player].cells[shot] = grids[0].cells[shot]
+            redirection_affichage(grids, current_player, current_player)
         else:
             grids[current_player].cells[shot] = current_player
             grids[0].play(current_player, shot)
-            sys.stdout = StringIO()
-            grids[0].display()
-            s = str(sys.stdout.getvalue())
-            envoi_message(connexions_clients[str(current_player)], s)
+            redirection_affichage(grids, current_player, current_player)
             current_player = current_player%2+1
             other_player = current_player%2+1
-        #envoi_message(connexions_clients[str(other_player)], str(other_player))
         if grids[0].gameOver() == -1:
             envoi_message(connexions_clients[str(other_player)], "L'autre joueur est en train de jouer. Veuillez attendre...\n")
     for client in connexions_clients:
         envoi_message(connexions_clients[client], "game over\n")
-        envoi_message(connexions_clients[client], "0")
-      
+        redirection_affichage(grids, 0, int(client))
+        if grids[0].gameOver() == int(client):
+            envoi_message(connexions_clients[client], "You win !\n")
+        else:
+            envoi_message(connexions_clients[client], "You lose !\n")
+
+
+
+# SERVEUR
         
 def serveur():
 
@@ -109,7 +121,8 @@ def serveur():
         if(nombre_clients) >= 2:
             message_pour_tous("Le jeu va commencer !\n")
             main()
-            
+
+# CLIENT
             
 def client():
 
@@ -128,12 +141,6 @@ def client():
     # 3) Dialogue avec le serveur :
     while 1:
         message = reception_message(connexion_au_serveur)
-        #if message == "1":
-            #grids[1].display()
-        #elif message == "2":
-            #grids[2].display()
-        #elif message == "0":
-            #grids[0].display()
         if message == "choix":
             shot = int(input("Quelle case allez-vous jouer ?\n"))
             envoi_int(connexion_au_serveur, shot)
@@ -145,7 +152,7 @@ def client():
     connexion_au_serveur.close()
 
  
-PORT = 7189
+PORT = 7190
 if len(sys.argv) < 2:
     HOTE = ''
     serveur()
