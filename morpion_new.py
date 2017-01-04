@@ -7,6 +7,7 @@ from grid import *
 connexions_clients = {} # dictionaire des connexions clients
 nombre_clients = 0
 grids = [grid(), grid(), grid()]
+type = ''
 
 def message_pour_tous(message):
     # Message du serveur vers tous les clients
@@ -14,6 +15,20 @@ def message_pour_tous(message):
     for client in connexions_clients:
         connexions_clients[client].send(message_bytes)
 
+def envoi_message_string(message, client): # à terminer d'implémenter
+    global type
+    type = str(len(message)) + 's'
+    packer = struct.Struct(type)
+    packed_data = packer.pack(message)
+    #print(message)
+    client.sendall(packed_data)
+
+def reception_message_string(client): # à terminer d'implémenter
+    unpacker = struct.Struct(type)
+    data = connexions_clients[str(client)].recv(unpacker.size)
+    unpacked_data = unpacker.unpack(data)
+    print(unpacked_data)
+           
 def main():
     global grids
     current_player = J1
@@ -24,7 +39,6 @@ def main():
         while shot < 0 or shot >= NB_CELLS:
             connexions_clients[str(current_player)].send(bytes(str(current_player)+"\n", "utf8"))
             connexions_clients[str(current_player)].send(bytes("choix\n", "utf8"))
-            # TODO : Recevoir le choix du joueur et on le place dans la variable shot
             unpacker = struct.Struct('I')
             data = connexions_clients[str(current_player)].recv(unpacker.size)
             unpacked_data = unpacker.unpack(data)
@@ -37,10 +51,10 @@ def main():
             current_player = current_player%2+1
             other_player = current_player%2+1
         connexions_clients[str(other_player)].send(bytes(str(other_player)+"\n", "utf8"))
-        connexions_clients[str(other_player)].send(bytes("L'autre joueur est en train de jouer. Veuillez attendre...", "utf8")) # TODO : gérer le cas où c'est la fin du jeu et l'autre n'aura pas à jouer
-    print("game over")
-    message_pour_tous("grids[0].display()\n")
-
+        connexions_clients[str(other_player)].send(bytes("L'autre joueur est en train de jouer. Veuillez attendre...\n", "utf8")) # TODO : gérer le cas où c'est la fin du jeu et l'autre n'aura pas à jouer
+    for client in connexions_clients:
+        connexions_clients[client].send(bytes("game over\n", "utf8"))         
+        connexions_clients[client].send(bytes("0\n", "utf8"))
         
 def serveur():
 
@@ -75,7 +89,7 @@ def serveur():
         message_client = "Vous êtes connecté."
         message_client_bytes = message_client.encode()
         connexion.send(message_client_bytes)
-
+   
         if(nombre_clients) >= 2:
             message_pour_tous("Le jeu va commencer !\n")
             main()
@@ -103,9 +117,10 @@ def client():
                 grids[1].display()
             elif message_list[i] == "2":
                 grids[2].display()
+            elif message_list[i] == "0":
+                grids[0].display()
             elif message_list[i] == "choix":
                 shot = int(input("Quelle case allez-vous jouer ?\n"))
-                # TODO : renvoyer l'int au serveur, afin de transmettre le choix du joueur au serveur
                 packer = struct.Struct('I')
                 packed_data = packer.pack(shot)
                 connexion_au_serveur.sendall(packed_data)
@@ -118,7 +133,7 @@ def client():
 
 
     
-PORT = 7077
+PORT = 7099
 if len(sys.argv) < 2:
     HOTE = ''
     serveur()
