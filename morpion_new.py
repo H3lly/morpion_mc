@@ -7,38 +7,43 @@ from grid import *
 connexions_clients = {} # dictionaire des connexions clients
 nombre_clients = 0
 grids = [grid(), grid(), grid()]
-type = ''
 
 def message_pour_tous(message):
     # Message du serveur vers tous les clients
-    message_bytes = message.encode()
     for client in connexions_clients:
-        connexions_clients[client].send(message_bytes)
+        envoi_message(connexions_clients[client], message)
 
-def envoi_message_string(message, client): # à terminer d'implémenter
-    global type
-    type = str(len(message)) + 's'
-    packer = struct.Struct(type)
-    packed_data = packer.pack(message)
-    #print(message)
-    client.sendall(packed_data)
+# PROTOCOL
+def envoi_message(sock, data):
+    length = len(data)
+    sock.sendall(struct.pack('!I', length))
+    sock.sendall(data.encode())
+    
+def reception_message(sock):
+    lengthbuf = recvall(sock, 4)
+    length = struct.unpack('!I', lengthbuf)
+    return recvall(sock, length[0]).decode("ascii")
 
-def reception_message_string(client): # à terminer d'implémenter
-    unpacker = struct.Struct(type)
-    data = connexions_clients[str(client)].recv(unpacker.size)
-    unpacked_data = unpacker.unpack(data)
-    print(unpacked_data)
+def recvall(sock, count):
+    buf = b''
+    while count:
+        newbuf = sock.recv(count)
+        if not newbuf:
+            return None
+        buf += newbuf
+        count -= len(newbuf)
+    return buf
            
 def main():
     global grids
     current_player = J1
     other_player = J2
-    connexions_clients[str(other_player)].send(bytes("L'autre joueur est en train de jouer. Veuillez attendre...", "utf8"))
+    envoi_message(connexions_clients[str(other_player)], "L'autre joueur est en train de jouer. Veuillez attendre...")
     while grids[0].gameOver() == -1:
         shot = -1
         while shot < 0 or shot >= NB_CELLS:
-            connexions_clients[str(current_player)].send(bytes(str(current_player)+"\n", "utf8"))
-            connexions_clients[str(current_player)].send(bytes("choix\n", "utf8"))
+            envoi_message(connexions_clients[str(current_player)], str(current_player))
+            envoi_message(connexions_clients[str(current_player)], "choix")
             unpacker = struct.Struct('I')
             data = connexions_clients[str(current_player)].recv(unpacker.size)
             unpacked_data = unpacker.unpack(data)
@@ -50,11 +55,11 @@ def main():
             grids[0].play(current_player, shot)
             current_player = current_player%2+1
             other_player = current_player%2+1
-        connexions_clients[str(other_player)].send(bytes(str(other_player)+"\n", "utf8"))
-        connexions_clients[str(other_player)].send(bytes("L'autre joueur est en train de jouer. Veuillez attendre...\n", "utf8")) # TODO : gérer le cas où c'est la fin du jeu et l'autre n'aura pas à jouer
+        envoi_message(connexions_clients[str(other_player)], str(other_player)+"\n")
+        envoi_message(connexions_clients[str(other_player)], "L'autre joueur est en train de jouer. Veuillez attendre...") # TODO : gérer le cas où c'est la fin du jeu et l'autre n'aura pas à jouer
     for client in connexions_clients:
-        connexions_clients[client].send(bytes("game over\n", "utf8"))         
-        connexions_clients[client].send(bytes("0\n", "utf8"))
+        envoi_message(connexions_clients[client], "game over")
+        envoi_message(connexions_clients[client], "0")
         
 def serveur():
 
@@ -86,12 +91,10 @@ def serveur():
         print("Client {} connecté, adresse IP {}, port {}.\n".format(str(nombre_clients), adresse[0], adresse[1]))
  
         # Dialogue avec les clients
-        message_client = "Vous êtes connecté."
-        message_client_bytes = message_client.encode()
-        connexion.send(message_client_bytes)
+        envoi_message(connexion, "Vous etes connecte.")
    
         if(nombre_clients) >= 2:
-            message_pour_tous("Le jeu va commencer !\n")
+            message_pour_tous("Le jeu va commencer !")
             main()
             
             
@@ -111,21 +114,20 @@ def client():
 
     # 3) Dialogue avec le serveur :
     while 1:
-        message_list = connexion_au_serveur.recv(1024).decode().split("\n") # le split permet de régler ici le problème de buffer
-        for i in range(len(message_list)):
-            if message_list[i] == "1":
-                grids[1].display()
-            elif message_list[i] == "2":
-                grids[2].display()
-            elif message_list[i] == "0":
-                grids[0].display()
-            elif message_list[i] == "choix":
-                shot = int(input("Quelle case allez-vous jouer ?\n"))
-                packer = struct.Struct('I')
-                packed_data = packer.pack(shot)
-                connexion_au_serveur.sendall(packed_data)
-            else:
-                print(message_list[i]+"\n")
+        message = reception_message(connexion_au_serveur)
+        if message == "1":
+            grids[1].display()
+        elif message == "2":
+            grids[2].display()
+        elif message == "0":
+            grids[0].display()
+        elif message == "choix":
+            shot = int(input("Quelle case allez-vous jouer ?\n"))
+            packer = struct.Struct('I')
+            packed_data = packer.pack(shot)
+            connexion_au_serveur.sendall(packed_data)
+        else:
+            print(message + "\n")
 
     # 4) Fermer la connexion :
     print("Fin de la connexion")
@@ -133,7 +135,7 @@ def client():
 
 
     
-PORT = 7099
+PORT = 7119
 if len(sys.argv) < 2:
     HOTE = ''
     serveur()
