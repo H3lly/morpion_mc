@@ -17,28 +17,25 @@ def message_pour_tous(message):
 def main():
     current_player = J1
     other_player = J2
-    for client in connexions_clients:
-        connexions_clients[client].send(bytes(client+"\n", "utf8"))
-    #connexions_clients[str(current_player)].send(bytes(str(current_player)+"\n", "utf8"))
-    #connexions_clients[str(other_player)].send(bytes(str(other_player)+"\n", "utf8"))
-    #connexions_clients[str(other_player)].send(bytes("L'autre joueur est en train de jouer. Veuillez attendre...", "utf8"))
+    connexions_clients[str(other_player)].send(bytes("L'autre joueur est en train de jouer. Veuillez attendre...", "utf8"))
     while grids[0].gameOver() == -1:
         shot = -1
         while shot < 0 or shot >= NB_CELLS:
+            connexions_clients[str(current_player)].send(bytes(str(current_player)+"\n", "utf8"))
             connexions_clients[str(current_player)].send(bytes("choix\n", "utf8"))
-            shot_str = (connexions_clients[str(current_player)].recv(1)).decode()
-            shot = int(shot_str)
-            print(shot_str)
+            # TODO : Recevoir le choix du joueur et on le place dans la variable shot
         if (grids[0].cells[shot]) != EMPTY:
+            grids[current_player].cells[shot] = grids[0].cells[shot]
+        else:
             grids[current_player].cells[shot] = current_player
             grids[0].play(current_player, shot)
             current_player = current_player%2+1
             other_player = current_player%2+1
-            for client in connexions_clients:
-                connexions_clients[client].send(bytes(client+"\n", "utf8"))
-                print("game over")
-                message_pour_tous("grids[0].display()\n")
-    
+        connexions_clients[str(other_player)].send(bytes(str(other_player)+"\n", "utf8"))
+        connexions_clients[str(other_player)].send(bytes("L'autre joueur est en train de jouer. Veuillez attendre...", "utf8")) # TODO : gérer le cas où c'est la fin du jeu et l'autre n'aura pas à jouer
+    print("game over")
+    message_pour_tous("grids[0].display()\n")
+
         
 def serveur():
 
@@ -95,28 +92,25 @@ def client():
 
     # 3) Dialogue avec le serveur :
     while 1:
-        message_serveur_bytes = connexion_au_serveur.recv(1024)
-        message_serveur = message_serveur_bytes.decode()
-        message_list = message_serveur.split("\n")
+        message_list = connexion_au_serveur.recv(1024).decode().split("\n")
         for i in range(len(message_list)):
-
             if message_list[i] == "1":
                 grids[1].display()
             elif message_list[i] == "2":
                 grids[2].display()
             elif message_list[i] == "choix":
-                shot = str(input("Quelle case allez-vous jouer ?\n"))
-                shot_bytes = shot.encode()
-                connexion_au_serveur.send(shot_bytes)
+                shot = int(input("Quelle case allez-vous jouer ?\n"))
+                # TODO : renvoyer l'int au serveur, afin de transmettre le choix du joueur au serveur
             else:
                 print(message_list[i]+"\n")
-
 
     # 4) Fermer la connexion :
     print("Fin de la connexion")
     connexion_au_serveur.close()
 
-PORT = 7061
+
+    
+PORT = 7071
 if len(sys.argv) < 2:
     HOTE = ''
     serveur()
