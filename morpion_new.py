@@ -92,7 +92,7 @@ def client():
 
     # 3) Dialogue avec le serveur :
     while 1:
-        message_list = connexion_au_serveur.recv(1024).decode().split("\n")
+        message_list = connexion_au_serveur.recv(1024).decode().split("\n") # le split permet de régler ici le problème de buffer
         for i in range(len(message_list)):
             if message_list[i] == "1":
                 grids[1].display()
