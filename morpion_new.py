@@ -13,7 +13,8 @@ def message_pour_tous(message):
     for client in connexions_clients:
         envoi_message(connexions_clients[client], message)
 
-# PROTOCOL
+# -- PROTOCOL ASCII -- #
+
 def envoi_message(sock, data):
     length = len(data)
     sock.sendall(struct.pack('!I', length))
@@ -33,7 +34,9 @@ def recvall(sock, count):
         buf += newbuf
         count -= len(newbuf)
     return buf
-           
+
+# -- FIN PROTOCOL ASCII -- #
+
 def main():
     global grids
     current_player = J1
@@ -56,14 +59,15 @@ def main():
             current_player = current_player%2+1
             other_player = current_player%2+1
         envoi_message(connexions_clients[str(other_player)], str(other_player))
-        envoi_message(connexions_clients[str(other_player)], "L'autre joueur est en train de jouer. Veuillez attendre...\n") # TODO : gérer le cas où c'est la fin du jeu et l'autre n'aura pas à jouer
+        if grids[0].gameOver() == -1:
+            envoi_message(connexions_clients[str(other_player)], "L'autre joueur est en train de jouer. Veuillez attendre...\n")
     for client in connexions_clients:
         envoi_message(connexions_clients[client], "game over\n")
         envoi_message(connexions_clients[client], "0")
         
 def serveur():
 
-    global nombre_clients
+    global nombre_clients, grids
 
     # Création du socket :
     connexion_principale = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -99,8 +103,7 @@ def serveur():
             
             
 def client():
-    global grids
-
+    
     # 1) création du socket :
     connexion_au_serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -135,7 +138,7 @@ def client():
 
 
     
-PORT = 7125
+PORT = 7139
 if len(sys.argv) < 2:
     HOTE = ''
     serveur()
