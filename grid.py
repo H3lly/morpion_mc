@@ -65,3 +65,6 @@ class grid:
             if(self.cells[i]== EMPTY):
                 return -1
         return 0
+
+    def myGrid():
+        return self

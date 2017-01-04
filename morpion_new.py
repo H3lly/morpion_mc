@@ -12,8 +12,8 @@ def message_pour_tous(message):
     # Message du serveur vers tous les clients
     for client in connexions_clients:
         envoi_message(connexions_clients[client], message)
-
-# -- PROTOCOL ASCII -- #
+        
+# -- PROTOCOL -- #
 
 def envoi_message(sock, data):
     length = len(data)
@@ -35,10 +35,15 @@ def recvall(sock, count):
         count -= len(newbuf)
     return buf
 
-# -- FIN PROTOCOL ASCII -- #
+def envoi_int(sock, data):
+    sock.sendall(struct.pack('!I', data))
+
+def reception_int(sock):
+    return struct.unpack('!I', sock.recv(4))[0]
+
+# -- FIN PROTOCOL -- #
 
 def main():
-    global grids
     current_player = J1
     other_player = J2
     envoi_message(connexions_clients[str(other_player)], "L'autre joueur est en train de jouer. Veuillez attendre...\n")
@@ -47,10 +52,7 @@ def main():
         while shot < 0 or shot >= NB_CELLS:
             envoi_message(connexions_clients[str(current_player)], str(current_player))
             envoi_message(connexions_clients[str(current_player)], "choix")
-            unpacker = struct.Struct('I')
-            data = connexions_clients[str(current_player)].recv(unpacker.size)
-            unpacked_data = unpacker.unpack(data)
-            shot = unpacked_data[0]
+            shot = reception_int(connexions_clients[str(current_player)])
         if (grids[0].cells[shot]) != EMPTY:
             grids[current_player].cells[shot] = grids[0].cells[shot]
         else:
@@ -67,7 +69,7 @@ def main():
         
 def serveur():
 
-    global nombre_clients, grids
+    global nombre_clients
 
     # Création du socket :
     connexion_principale = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -103,7 +105,7 @@ def serveur():
             
             
 def client():
-    
+
     # 1) création du socket :
     connexion_au_serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -114,6 +116,7 @@ def client():
         print("La connexion a échoué.\n")
         sys.exit()
     print("Connexion établie avec le serveur.\n")
+
 
     # 3) Dialogue avec le serveur :
     while 1:
@@ -126,9 +129,7 @@ def client():
             grids[0].display()
         elif message == "choix":
             shot = int(input("Quelle case allez-vous jouer ?\n"))
-            packer = struct.Struct('I')
-            packed_data = packer.pack(shot)
-            connexion_au_serveur.sendall(packed_data)
+            envoi_int(connexion_au_serveur, shot)
         else:
             print(message)
 
@@ -136,9 +137,8 @@ def client():
     print("Fin de la connexion")
     connexion_au_serveur.close()
 
-
-    
-PORT = 7139
+ 
+PORT = 7186
 if len(sys.argv) < 2:
     HOTE = ''
     serveur()
