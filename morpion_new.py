@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import socket, sys
+import socket, sys, struct
 from grid import *
 
 connexions_clients = {} # dictionaire des connexions clients
@@ -15,6 +15,7 @@ def message_pour_tous(message):
         connexions_clients[client].send(message_bytes)
 
 def main():
+    global grids
     current_player = J1
     other_player = J2
     connexions_clients[str(other_player)].send(bytes("L'autre joueur est en train de jouer. Veuillez attendre...", "utf8"))
@@ -24,6 +25,10 @@ def main():
             connexions_clients[str(current_player)].send(bytes(str(current_player)+"\n", "utf8"))
             connexions_clients[str(current_player)].send(bytes("choix\n", "utf8"))
             # TODO : Recevoir le choix du joueur et on le place dans la variable shot
+            unpacker = struct.Struct('I')
+            data = connexions_clients[str(current_player)].recv(unpacker.size)
+            unpacked_data = unpacker.unpack(data)
+            shot = unpacked_data[0]
         if (grids[0].cells[shot]) != EMPTY:
             grids[current_player].cells[shot] = grids[0].cells[shot]
         else:
@@ -101,6 +106,9 @@ def client():
             elif message_list[i] == "choix":
                 shot = int(input("Quelle case allez-vous jouer ?\n"))
                 # TODO : renvoyer l'int au serveur, afin de transmettre le choix du joueur au serveur
+                packer = struct.Struct('I')
+                packed_data = packer.pack(shot)
+                connexion_au_serveur.sendall(packed_data)
             else:
                 print(message_list[i]+"\n")
 
@@ -110,7 +118,7 @@ def client():
 
 
     
-PORT = 7071
+PORT = 7077
 if len(sys.argv) < 2:
     HOTE = ''
     serveur()
