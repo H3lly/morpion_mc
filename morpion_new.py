@@ -6,6 +6,7 @@ from io import StringIO
 from grid import *
 
 connexions_clients = {} # dictionaire des connexions clients
+scores_clients = {}
 nombre_clients = 0
 running = False
 
@@ -24,17 +25,16 @@ def redirection_affichage(grids, grid, current_player):
     s = str(sys.stdout.getvalue())
     envoi_message(connexions_clients[str(current_player)], s)
 
-def redirection_affichage_observateur(grids):
-    for i in range(3, nombre_clients+1):                              #essai observateur
-        redirection_affichage(grids, 0, i)                #essai observateur
-
-def affichage_observateur(current_player, shot, message):    #essai observateur
+def redirection_affichage_observateur(grids, current_player, shot, function, gagnant):
     for i in range(3, nombre_clients+1):
-        if shot != -1:
-            envoi_message(connexions_clients[str(i)], "Le joueur {} a joué la case {}.\n".format(string(current_player), str(shot)))
-        else:
-            envoi_message(connexions_clients[str(i)], message)
-
+        envoi_message(connexions_clients[str(i)], "clear")
+        if function == 0:    # info sur le coup
+            envoi_message(connexions_clients[str(i)], "Le joueur {} a joue sur la case {}.\n".format(current_player, shot))
+        elif function == 1:     # case déjà prise
+            envoi_message(connexions_clients[str(i)], "Le joueur {} a joué sur la case {}, déjà prise par le joueur {}.\n".format(current_player, shot, current_player%2+1))
+        elif function == 2: # fin du jeu
+            envoi_message(connexions_clients[str(i)], "Fin de la partie !\nLe joueur {} a gagne.\nJ1 : {} points\nJ2 : {} points\n".format(gagnant, scores_clients["1"], scores_clients["2"]))
+        redirection_affichage(grids, 0, i)                
         
 # PROTOCOL
 
@@ -83,27 +83,32 @@ def main():
         if (grids[0].cells[shot]) != EMPTY:
             envoi_message(connexions_clients[str(current_player)], "\nLa case est deja prise !\n")
             grids[current_player].cells[shot] = grids[0].cells[shot]
-            redirection_affichage_observateur(grids)
+            redirection_affichage_observateur(grids, current_player, shot, 1, 0)
         else:
             grids[current_player].cells[shot] = current_player
             grids[0].play(current_player, shot)
             redirection_affichage(grids, current_player, current_player)
-            #affichage_observateur(current_player, shot, "  hkjh")
-            redirection_affichage_observateur(grids)
+            redirection_affichage_observateur(grids, current_player, shot, 0, 0)
             current_player = current_player%2+1
             other_player = current_player%2+1
         if grids[0].gameOver() == -1:
             envoi_message(connexions_clients[str(other_player)], "clear")
             envoi_message(connexions_clients[str(other_player)], "L'autre joueur est en train de jouer. Veuillez attendre...\n")
+    gagnant = -1
     for client in connexions_clients:
         envoi_message(connexions_clients[client], "clear")
         envoi_message(connexions_clients[client], "Game over !\n")
         redirection_affichage(grids, 0, int(client))
         if grids[0].gameOver() == int(client):
             envoi_message(connexions_clients[client], "You win !\n")
+            scores_clients[client] += 1
+            gagnant = int(client)
         else:
-            envoi_message(connexions_clients[client], "You lose !\n")
-    message_pour_tous("rejouer")                                            #marche pour Y, problème pour N
+            if int(client) == 1 or int(client) == 2:
+                envoi_message(connexions_clients[client], "You lose !\n")
+        envoi_message(connexions_clients[client], "J1 : {} points\nJ2 : {} points\n".format(gagnant, scores_clients["1"], scores_clients["2"]))
+    redirection_affichage_observateur(grids, current_player, shot, 2, gagnant)
+    message_pour_tous("rejouer")                                         #marche pour Y, problème pour N
     for client in connexions_clients:
         message = reception_message(connexions_clients[client])
         if message == "Y":
@@ -142,6 +147,7 @@ def serveur():
         # Mémoriser la connexion dans le dictionnaire :
         nombre_clients = nombre_clients + 1
         connexions_clients[str(nombre_clients)] = connexion
+        scores_clients[str(nombre_clients)] = 0
  
         # Dialogue avec les clients
         envoi_message(connexion, "Vous etes connecte.\n")
