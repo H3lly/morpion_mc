@@ -1,12 +1,15 @@
 #! /usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import socket, sys, struct, os
+import socket, sys, struct, os, threading, logging
 from io import StringIO
 from grid import *
 
 connexions_clients = {} # dictionaire des connexions clients
 nombre_clients = 0
+running = False
+
+logging.basicConfig(level = logging.DEBUG, format = "(%(threadName)-10s) %(message)s")
 
 # AFFICHAGE
 
@@ -20,11 +23,13 @@ def redirection_affichage(grids, grid, current_player):
     grids[grid].display()
     s = str(sys.stdout.getvalue())
     envoi_message(connexions_clients[str(current_player)], s)
-    for i in range(3, nombre_clients):                              #essai observateur
-        envoi_message(connexions_clients[str(i)], s)                #essai observateur
 
-def affichage_observateur(grids, current_player, shot, message):    #essai observateur
-    for i in range(3, nombre_clients):
+def redirection_affichage_observateur(grids):
+    for i in range(3, nombre_clients+1):                              #essai observateur
+        redirection_affichage(grids, 0, i)                #essai observateur
+
+def affichage_observateur(current_player, shot, message):    #essai observateur
+    for i in range(3, nombre_clients+1):
         if shot != -1:
             envoi_message(connexions_clients[str(i)], "Le joueur {} a joué la case {}.\n".format(string(current_player), str(shot)))
         else:
@@ -78,10 +83,13 @@ def main():
         if (grids[0].cells[shot]) != EMPTY:
             envoi_message(connexions_clients[str(current_player)], "\nLa case est deja prise !\n")
             grids[current_player].cells[shot] = grids[0].cells[shot]
+            redirection_affichage_observateur(grids)
         else:
             grids[current_player].cells[shot] = current_player
             grids[0].play(current_player, shot)
             redirection_affichage(grids, current_player, current_player)
+            #affichage_observateur(current_player, shot, "  hkjh")
+            redirection_affichage_observateur(grids)
             current_player = current_player%2+1
             other_player = current_player%2+1
         if grids[0].gameOver() == -1:
@@ -109,7 +117,7 @@ def main():
         
 def serveur():
 
-    global nombre_clients
+    global nombre_clients, running
 
     # Création du socket :
     connexion_principale = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -119,11 +127,11 @@ def serveur():
     try:
         connexion_principale.bind((HOTE, PORT))
     except socket.error:
-        print("La liaison du socket à l'adresse choisie a échoué.\n")
+        logging.debug("La liaison du socket à l'adresse choisie a échoué.\n")
         sys.exit()
 
     # Attente de la requete de connexion d'un client :
-    print("Serveur pret, en attente de requetes ...\n")
+    logging.debug("Serveur pret, en attente de requetes ...\n")
     connexion_principale.listen(5)
 
     # Prise en charge des connexions demandées par les clients :
@@ -134,14 +142,19 @@ def serveur():
         # Mémoriser la connexion dans le dictionnaire :
         nombre_clients = nombre_clients + 1
         connexions_clients[str(nombre_clients)] = connexion
-        print("Client {} connecté, adresse IP {}, port {}.\n".format(str(nombre_clients), adresse[0], adresse[1]))
  
         # Dialogue avec les clients
         envoi_message(connexion, "Vous etes connecte.\n")
    
-        while nombre_clients >= 2:
-            message_pour_tous("Le jeu va commencer !\n")
-            main()
+        logging.debug("Client {} connecté, adresse IP {}, port {}.\n".format(str(nombre_clients), adresse[0], adresse[1]))
+
+
+        if nombre_clients == 2:
+            if not running:
+                threading.Thread(target = main, args = ()).start() #le thread appel le main
+                running = True
+
+# REJOUER
 
 # CLIENT
             
@@ -184,7 +197,7 @@ def client():
     connexion_au_serveur.close()
 
  
-PORT = 7192
+PORT = 7193
 if len(sys.argv) < 2:
     HOTE = ''
     serveur()
